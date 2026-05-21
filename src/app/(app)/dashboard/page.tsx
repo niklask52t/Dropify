@@ -1,47 +1,40 @@
-import { createClient } from '@/lib/supabase/server';
+import { redirect } from 'next/navigation';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/db';
 import { ReleaseFeed } from '@/components/releases/ReleaseFeed';
 import type { Release, Artist } from '@/types';
 
 export const revalidate = 0;
 
 export default async function DashboardPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const session = await getServerSession(authOptions);
+  if (!session?.user) redirect('/login');
 
-  if (!user) return null;
+  const tracked = await prisma.trackedArtist.findMany({
+    where: { userId: session.user.id },
+    select: { artist: { select: { spotifyId: true } } },
+  });
 
-  const { data: tracked } = await supabase
-    .from('tracked_artists')
-    .select('artist_id, artists(spotify_id)')
-    .eq('user_id', user.id);
-
-  const artistSpotifyIds = (tracked ?? [])
-    .map((t) => (t.artists as unknown as { spotify_id: string } | null)?.spotify_id)
-    .filter((id): id is string => !!id);
+  const artistSpotifyIds = tracked.map((t) => t.artist.spotifyId);
 
   let releases: (Release & { artist?: Artist })[] = [];
 
   if (artistSpotifyIds.length > 0) {
-    const { data } = await supabase
-      .from('releases')
-      .select('*, artist:artist_spotify_id(id, name, image_url, spotify_url, spotify_id)')
-      .in('artist_spotify_id', artistSpotifyIds)
-      .order('release_date', { ascending: false })
-      .limit(200);
-
-    releases = (data ?? []) as (Release & { artist?: Artist })[];
+    const rows = await prisma.release.findMany({
+      where: { artistSpotifyId: { in: artistSpotifyIds } },
+      include: { artist: true },
+      orderBy: { releaseDate: 'desc' },
+      take: 200,
+    });
+    releases = rows as unknown as (Release & { artist?: Artist })[];
   }
 
-  const { data: artistsList } = await supabase
-    .from('tracked_artists')
-    .select('artists(id, spotify_id, name, image_url)')
-    .eq('user_id', user.id);
-
-  const trackedArtists = (artistsList ?? [])
-    .map((t) => t.artists as unknown as Artist | null)
-    .filter((a): a is Artist => !!a);
+  const artistRows = await prisma.trackedArtist.findMany({
+    where: { userId: session.user.id },
+    include: { artist: true },
+  });
+  const trackedArtists = artistRows.map((t) => t.artist) as unknown as Artist[];
 
   return (
     <div>

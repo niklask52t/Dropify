@@ -1,41 +1,24 @@
 'use client';
 
-import { createClient } from '@/lib/supabase/client';
+import { signIn } from 'next-auth/react';
 import { useState } from 'react';
 import Image from 'next/image';
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   async function handleLogin() {
     setLoading(true);
-    setError(null);
-
-    const supabase = createClient();
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'spotify',
-      options: {
-        scopes: 'user-read-email user-read-private',
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
-
-    if (error) {
-      setError(error.message);
-      setLoading(false);
-    }
+    await signIn('spotify', { callbackUrl: '/dashboard' });
   }
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center px-4">
-      {/* Ambient glow */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-brand/5 rounded-full blur-3xl" />
       </div>
 
       <div className="relative w-full max-w-sm">
-        {/* Logo with text — full hero */}
         <div className="text-center mb-10">
           <div className="flex justify-center mb-2">
             <Image
@@ -50,18 +33,11 @@ export default function LoginPage() {
           <p className="text-zinc-400 text-sm mt-1">Track every release from your artists</p>
         </div>
 
-        {/* Card */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8">
           <h2 className="text-lg font-semibold text-white mb-1">Sign in</h2>
           <p className="text-zinc-400 text-sm mb-6">
             Connect your Spotify account to start tracking releases.
           </p>
-
-          {error && (
-            <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
-              {error}
-            </div>
-          )}
 
           <button
             onClick={handleLogin}

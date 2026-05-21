@@ -1,64 +1,46 @@
-import { createServerClient, type CookieOptions } from '@supabase/ssr';
+import { getToken } from 'next-auth/jwt';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { checkAccess } from './lib/access-control';
 
-const PUBLIC_PATHS = ['/login', '/auth/callback', '/access-denied', '/api/cron'];
+const PUBLIC_PATHS = ['/login', '/api/auth', '/access-denied', '/api/cron'];
 
 export async function proxy(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({ request });
-
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll(cookiesToSet: Array<{ name: string; value: string; options: CookieOptions }>) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-          supabaseResponse = NextResponse.next({ request });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          );
-        },
-      },
-    }
-  );
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
   const pathname = request.nextUrl.pathname;
   const isPublicPath = PUBLIC_PATHS.some((p) => pathname.startsWith(p));
   const isApiRoute = pathname.startsWith('/api/');
 
-  if (!user) {
-    if (isPublicPath || (isApiRoute && !pathname.startsWith('/api/cron'))) {
-      return supabaseResponse;
-    }
+  const token = await getToken({
+    req: request,
+    secret: process.env.NEXTAUTH_SECRET!,
+  });
+
+  if (!token) {
+    if (isPublicPath || isApiRoute) return NextResponse.next();
     const loginUrl = new URL('/login', request.url);
-    loginUrl.searchParams.set('next', pathname);
+    loginUrl.searchParams.set('callbackUrl', pathname);
     return NextResponse.redirect(loginUrl);
   }
 
-  if (!isPublicPath) {
-    const spotifyId = user.user_metadata?.provider_id as string | undefined;
-    const { allowed } = checkAccess(user.email, spotifyId);
+  // Private mode access control (uses data from JWT — no DB query)
+  if (!isPublicPath && process.env.APP_ACCESS_MODE === 'private') {
+    const { allowed } = checkAccess(
+      token.email as string | undefined,
+      token.spotifyId as string | undefined
+    );
     if (!allowed) {
       return NextResponse.redirect(new URL('/access-denied', request.url));
     }
   }
 
+  // Redirect logged-in users away from login page
   if (pathname === '/login') {
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
-  return supabaseResponse;
+  return NextResponse.next();
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|png)$).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
 };

@@ -1,17 +1,17 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/db';
 
 export async function GET() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const session = await getServerSession(authOptions);
+  if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { data, error } = await supabase
-    .from('tracked_artists')
-    .select('id, artist_id, created_at, artists(*)')
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: false });
+  const watchlist = await prisma.trackedArtist.findMany({
+    where: { userId: session.user.id },
+    include: { artist: true },
+    orderBy: { createdAt: 'desc' },
+  });
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ watchlist: data ?? [] });
+  return NextResponse.json({ watchlist });
 }

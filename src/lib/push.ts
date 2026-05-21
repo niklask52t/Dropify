@@ -1,5 +1,4 @@
 import webpush from 'web-push';
-import type { Release } from '@/types';
 
 if (process.env.VAPID_PRIVATE_KEY && process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY) {
   webpush.setVapidDetails(
@@ -22,23 +21,28 @@ export async function sendPushNotification(
     await webpush.sendNotification(subscription as webpush.PushSubscription, JSON.stringify(payload));
     return { success: true };
   } catch (err: unknown) {
-    const error = err as { statusCode?: number };
-    if (error.statusCode === 410 || error.statusCode === 404) {
-      return { success: false, gone: true };
-    }
+    const e = err as { statusCode?: number };
+    if (e.statusCode === 410 || e.statusCode === 404) return { success: false, gone: true };
     return { success: false };
   }
 }
 
-export function buildReleaseNotificationPayload(release: Omit<Release, 'artist'> & { artist?: { name: string } }) {
+interface PushRelease {
+  type: string;
+  title: string;
+  coverUrl?: string | null;
+  spotifyUrl?: string | null;
+  spotifyId: string;
+  artist?: { name: string } | null;
+}
+
+export function buildReleaseNotificationPayload(release: PushRelease) {
   return {
     title: `New ${release.type}: ${release.title}`,
     body: release.artist?.name ?? 'Unknown artist',
-    icon: release.cover_url ?? '/icon-192x192.png',
-    badge: '/badge-72x72.png',
-    tag: `release-${release.spotify_id}`,
-    data: {
-      url: release.spotify_url ?? process.env.NEXT_PUBLIC_APP_URL + '/dashboard',
-    },
+    icon: release.coverUrl ?? '/logo-icon.png',
+    badge: '/logo-icon.png',
+    tag: `release-${release.spotifyId}`,
+    data: { url: release.spotifyUrl ?? `${process.env.NEXT_PUBLIC_APP_URL}/dashboard` },
   };
 }
