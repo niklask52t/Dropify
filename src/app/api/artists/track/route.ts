@@ -3,10 +3,8 @@ import { createClient } from '@/lib/supabase/server';
 import { syncSingleArtist } from '@/lib/sync';
 
 export async function POST(request: Request) {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const body = await request.json();
@@ -16,7 +14,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'spotifyId and name required' }, { status: 400 });
   }
 
-  // Upsert artist into global cache
   await supabase.from('artists').upsert(
     {
       spotify_id: spotifyId,
@@ -31,7 +28,6 @@ export async function POST(request: Request) {
     { onConflict: 'spotify_id' }
   );
 
-  // Fetch the artist row (needed for artist_id FK)
   const { data: artist, error: fetchErr } = await supabase
     .from('artists')
     .select('id, spotify_id, name, image_url, genres, popularity, followers, spotify_url')
@@ -42,7 +38,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Failed to resolve artist' }, { status: 500 });
   }
 
-  // Add to watchlist
   const { error: trackErr } = await supabase.from('tracked_artists').insert({
     user_id: user.id,
     artist_id: artist.id,
@@ -55,25 +50,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: trackErr.message }, { status: 500 });
   }
 
-  // Trigger background sync (fire-and-forget, don't await)
   syncSingleArtist(spotifyId).catch(console.error);
 
   return NextResponse.json({ success: true, artist });
 }
 
 export async function DELETE(request: Request) {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { searchParams } = new URL(request.url);
   const spotifyId = searchParams.get('spotifyId');
-
-  if (!spotifyId) {
-    return NextResponse.json({ error: 'spotifyId required' }, { status: 400 });
-  }
+  if (!spotifyId) return NextResponse.json({ error: 'spotifyId required' }, { status: 400 });
 
   const { data: artist } = await supabase
     .from('artists')
@@ -81,9 +70,7 @@ export async function DELETE(request: Request) {
     .eq('spotify_id', spotifyId)
     .single();
 
-  if (!artist) {
-    return NextResponse.json({ error: 'Artist not found' }, { status: 404 });
-  }
+  if (!artist) return NextResponse.json({ error: 'Artist not found' }, { status: 404 });
 
   await supabase
     .from('tracked_artists')

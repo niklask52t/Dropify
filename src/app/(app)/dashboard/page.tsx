@@ -5,14 +5,13 @@ import type { Release, Artist } from '@/types';
 export const revalidate = 0;
 
 export default async function DashboardPage() {
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) return null;
 
-  // Get user's tracked artist IDs
   const { data: tracked } = await supabase
     .from('tracked_artists')
     .select('artist_id, artists(spotify_id)')
@@ -35,7 +34,6 @@ export default async function DashboardPage() {
     releases = (data ?? []) as (Release & { artist?: Artist })[];
   }
 
-  // Get tracked artists for filter dropdown
   const { data: artistsList } = await supabase
     .from('tracked_artists')
     .select('artists(id, spotify_id, name, image_url)')
@@ -53,7 +51,6 @@ export default async function DashboardPage() {
           All releases from your tracked artists, sorted by date.
         </p>
       </div>
-
       <ReleaseFeed
         releases={releases}
         trackedArtists={trackedArtists}

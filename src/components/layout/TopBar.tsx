@@ -1,12 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
+import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
-import { LogOut, RefreshCw, ChevronDown, Disc3, LayoutDashboard, Music2, Calendar, Settings } from 'lucide-react';
+import { LogOut, RefreshCw, ChevronDown, LayoutDashboard, Music2, Calendar, Settings, ScrollText } from 'lucide-react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
 import type { Profile } from '@/types';
 
 interface TopBarProps {
@@ -38,22 +38,21 @@ export function TopBar({ user }: TopBarProps) {
 
   const navItems = [
     { href: '/dashboard', icon: LayoutDashboard },
-    { href: '/artists', icon: Music2 },
-    { href: '/calendar', icon: Calendar },
-    { href: '/settings', icon: Settings },
+    { href: '/artists',   icon: Music2 },
+    { href: '/calendar',  icon: Calendar },
+    { href: '/changelog', icon: ScrollText },
+    { href: '/settings',  icon: Settings },
   ];
 
   return (
     <header className="h-16 bg-zinc-950 border-b border-zinc-800/60 flex items-center px-4 sm:px-6 gap-4 shrink-0">
-      {/* Mobile logo */}
+      {/* Mobile: logo icon only */}
       <div className="md:hidden flex items-center gap-2">
-        <div className="w-7 h-7 bg-brand rounded-lg flex items-center justify-center">
-          <Disc3 size={15} className="text-black" />
-        </div>
-        <span className="font-bold text-white">Dropify</span>
+        <Image src="/logo-icon.png" alt="Dropify" width={26} height={26} />
+        <span className="font-bold text-white text-base">Dropify</span>
       </div>
 
-      {/* Mobile nav */}
+      {/* Mobile nav icons */}
       <nav className="md:hidden flex items-center gap-1 ml-2">
         {navItems.map(({ href, icon: Icon }) => (
           <Link
@@ -73,15 +72,15 @@ export function TopBar({ user }: TopBarProps) {
 
       <div className="flex-1" />
 
-      {/* Sync button */}
+      {/* Sync */}
       <button
         onClick={handleSync}
         disabled={syncing}
-        className="hidden sm:flex btn-ghost items-center gap-2 text-zinc-400 hover:text-white"
+        className="hidden sm:flex btn-ghost items-center gap-2"
         title="Sync all artists"
       >
         <RefreshCw size={15} className={cn(syncing && 'animate-spin')} />
-        <span className="text-xs">{syncing ? 'Syncing...' : 'Sync'}</span>
+        <span className="text-xs">{syncing ? 'Syncing…' : 'Sync'}</span>
       </button>
 
       {/* User menu */}

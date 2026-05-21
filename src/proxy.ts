@@ -5,7 +5,7 @@ import { checkAccess } from './lib/access-control';
 
 const PUBLIC_PATHS = ['/login', '/auth/callback', '/access-denied', '/api/cron'];
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -35,7 +35,6 @@ export async function middleware(request: NextRequest) {
   const isPublicPath = PUBLIC_PATHS.some((p) => pathname.startsWith(p));
   const isApiRoute = pathname.startsWith('/api/');
 
-  // Unauthenticated
   if (!user) {
     if (isPublicPath || (isApiRoute && !pathname.startsWith('/api/cron'))) {
       return supabaseResponse;
@@ -45,17 +44,14 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // Authenticated — check access control
   if (!isPublicPath) {
     const spotifyId = user.user_metadata?.provider_id as string | undefined;
     const { allowed } = checkAccess(user.email, spotifyId);
-
     if (!allowed) {
       return NextResponse.redirect(new URL('/access-denied', request.url));
     }
   }
 
-  // Redirect logged-in users away from login
   if (pathname === '/login') {
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
@@ -64,5 +60,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|png)$).*)'],
 };

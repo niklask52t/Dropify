@@ -11,7 +11,7 @@ interface ArtistSearchProps {
 
 export function ArtistSearch({ onResults, onSearchingChange }: ArtistSearchProps) {
   const [query, setQuery] = useState('');
-  const debounceRef = useRef<NodeJS.Timeout>();
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const search = useCallback(
     async (q: string) => {

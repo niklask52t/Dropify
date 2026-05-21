@@ -2,29 +2,72 @@
 
 **Track every release from your favorite Spotify artists — in one place.**
 
-A production-ready web app for tracking Spotify artist releases. Multiple users can log in with Spotify, track artists, and see all releases in a central dashboard with a calendar view, filters, and push/email notifications.
+A production-ready web app for tracking Spotify artist releases. Multiple users can log in with their Spotify account, track artists, and see all releases in a central dashboard with calendar view, filters, and push/email notifications.
+
+![Dropify](public/logo-full.png)
 
 ---
 
-## Stack
+## Table of Contents
 
-| Layer | Tech |
+1. [Features](#features)
+2. [Tech Stack](#tech-stack)
+3. [Quick Start (Local)](#quick-start-local)
+4. [Spotify Developer App Setup](#spotify-developer-app-setup)
+5. [Supabase Setup](#supabase-setup)
+6. [Environment Variables](#environment-variables)
+7. [Production Deployment on Debian 13](#production-deployment-on-debian-13)
+8. [Access Control](#access-control)
+9. [Architecture](#architecture)
+10. [Changelog](#changelog)
+
+---
+
+## Features
+
+| Feature | Details |
 |---|---|
-| Framework | Next.js 14 (App Router) |
-| Language | TypeScript |
-| Styling | Tailwind CSS |
-| Database + Auth | Supabase (PostgreSQL + RLS) |
-| Spotify data | Spotify Client Credentials API |
-| Email | Resend |
+| **Spotify OAuth Login** | Sign in with Spotify, profile sync, logout |
+| **Access Control** | Private or public mode, allowlist by Spotify ID or email |
+| **Artist Search** | Debounced global search, artist cards with image, genres, popularity, followers |
+| **Watchlist** | Per-user tracked artists, no duplicates, instant remove |
+| **Release Sync** | Albums, Singles, EPs, Compilations, Appears On |
+| **Dashboard** | All releases from tracked artists, filters: artist / type / date / search |
+| **Calendar** | Monthly calendar with per-day release drill-down |
+| **Auto Sync** | Daily Vercel Cron (08:00 UTC) + manual trigger |
+| **Email Notifications** | New release emails via Resend (HTML template) |
+| **Push Notifications** | Browser push via VAPID / web-push |
+| **Settings** | Account info, notification prefs, watchlist management |
+| **Security** | RLS on all tables, Spotify secrets server-side only |
+| **Responsive** | Dark theme, works on all screen sizes |
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Framework | Next.js 16 (App Router) |
+| Language | TypeScript 6 |
+| Styling | Tailwind CSS 4 |
+| Auth + DB | Supabase (PostgreSQL + RLS) |
+| Spotify Data | Spotify Client Credentials API |
+| Email | Resend v6 |
 | Push | web-push (VAPID) |
 | Cron | Vercel Cron Jobs |
-| Deploy | Vercel |
+| Deployment | Vercel (cloud) or standalone Node.js |
 
 ---
 
-## Quick Start
+## Quick Start (Local)
 
-### 1. Clone & install
+### Prerequisites
+
+- Node.js ≥ 20.9 (`node -v`)
+- A [Supabase](https://supabase.com) project
+- A [Spotify Developer App](https://developer.spotify.com/dashboard)
+
+### 1. Clone and install
 
 ```bash
 git clone https://github.com/niklask52t/Dropify
@@ -32,50 +75,143 @@ cd Dropify
 npm install
 ```
 
-### 2. Supabase setup
-
-1. Create a project at https://supabase.com
-2. In the SQL editor, run the full contents of `supabase/migrations/001_schema.sql`
-3. Go to **Auth > Providers > Spotify** and enable it
-4. Add your Spotify Client ID + Secret to Supabase Auth
-5. Set the redirect URL to: `https://yourdomain.com/auth/callback`
-
-### 3. Spotify App
-
-1. Create an app at https://developer.spotify.com/dashboard
-2. Add redirect URI: `https://yourdomain.com/auth/callback`
-3. Copy Client ID and Client Secret
-
-### 4. Environment variables
+### 2. Configure environment
 
 ```bash
 cp .env.example .env.local
+# Edit .env.local with your values (see Environment Variables section)
 ```
 
-Fill in all values in `.env.local`:
+### 3. Run database migrations
+
+In your Supabase project → SQL Editor, run the full content of:
+
+```
+supabase/migrations/001_schema.sql
+```
+
+### 4. Start development server
+
+```bash
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000)
+
+---
+
+## Spotify Developer App Setup
+
+### 1. Create a Spotify App
+
+1. Go to [developer.spotify.com/dashboard](https://developer.spotify.com/dashboard)
+2. Click **Create app**
+3. Fill in:
+   - **App name**: Dropify (or any name)
+   - **App description**: Spotify release tracker
+   - **Redirect URIs**: `http://localhost:3000/auth/callback` (for local) + `https://yourdomain.com/auth/callback` (for production)
+   - **Which API/SDKs are you planning to use?**: Web API
+4. Click **Save**
+
+### 2. Get your credentials
+
+On the app dashboard:
+- Copy **Client ID** → `SPOTIFY_CLIENT_ID`
+- Click **View client secret** → Copy → `SPOTIFY_CLIENT_SECRET`
+
+### 3. Required OAuth scopes (handled by Supabase Auth)
+
+Dropify requests these scopes on login:
+- `user-read-email` — to get the user's email
+- `user-read-private` — to get the Spotify user ID
+
+All release/artist data is fetched via **Client Credentials** (no user token required).
+
+### 4. Configure Supabase Auth with Spotify
+
+1. Open your Supabase project → **Authentication → Providers → Spotify**
+2. Toggle **Enable**
+3. Enter your **Spotify Client ID** and **Client Secret**
+4. The **Callback URL** shown by Supabase (e.g. `https://xxxx.supabase.co/auth/v1/callback`) — add this to your Spotify app's Redirect URIs
+5. Save
+
+> **Important**: You need **both** the Supabase callback URL (for the OAuth flow) and your app's `/auth/callback` route in Spotify's Redirect URIs.
+
+---
+
+## Supabase Setup
+
+### 1. Create a project
+
+1. Go to [supabase.com](https://supabase.com) → **New project**
+2. Choose a region close to your users
+3. Set a strong database password
+
+### 2. Run the schema
+
+1. Open your project → **SQL Editor**
+2. Paste the entire content of `supabase/migrations/001_schema.sql`
+3. Click **Run**
+
+This creates:
+- `profiles` — user data (auto-populated via Auth trigger)
+- `artists` — global artist cache
+- `tracked_artists` — per-user watchlist
+- `releases` — global release cache
+- `notification_settings` — per-user prefs
+- `push_subscriptions` — VAPID subscriptions
+- `sync_logs` — cron/sync history
+- `notifications_sent` — dedup guard for notifications
+
+### 3. Get your API keys
+
+Project Settings → **API**:
+- `URL` → `NEXT_PUBLIC_SUPABASE_URL`
+- `anon public` key → `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `service_role` key → `SUPABASE_SERVICE_ROLE_KEY` (**keep this secret!**)
+
+### 4. Configure Auth Redirect
+
+**Authentication → URL Configuration**:
+- **Site URL**: `https://yourdomain.com`
+- **Redirect URLs** (add all): `https://yourdomain.com/auth/callback`, `http://localhost:3000/auth/callback`
+
+---
+
+## Environment Variables
+
+Copy `.env.example` to `.env.local` and fill in all values:
 
 ```env
-NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
-SUPABASE_SERVICE_ROLE_KEY=eyJ...
+# ─── Supabase ────────────────────────────────────────────────────────────────
+NEXT_PUBLIC_SUPABASE_URL=https://xxxxxxxxxxxx.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1...
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1...
 
-SPOTIFY_CLIENT_ID=your_client_id
-SPOTIFY_CLIENT_SECRET=your_client_secret
+# ─── Spotify ─────────────────────────────────────────────────────────────────
+SPOTIFY_CLIENT_ID=your_client_id_here
+SPOTIFY_CLIENT_SECRET=your_client_secret_here
 
-NEXT_PUBLIC_APP_URL=http://localhost:3000
+# ─── App URL ─────────────────────────────────────────────────────────────────
+NEXT_PUBLIC_APP_URL=https://yourdomain.com
 
-APP_ACCESS_MODE=public
-ALLOWED_SPOTIFY_USER_IDS=id1,id2
+# ─── Access Control ──────────────────────────────────────────────────────────
+APP_ACCESS_MODE=public                  # or "private"
+ALLOWED_SPOTIFY_USER_IDS=abc123,def456  # find at spotify.com/account/overview
 ALLOWED_EMAILS=you@example.com
 
-RESEND_API_KEY=re_xxx
-RESEND_FROM_EMAIL=Dropify <noreply@yourdomain.com>
+# ─── Resend (Email) ──────────────────────────────────────────────────────────
+RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxx
+RESEND_FROM_EMAIL=Dropify <notifications@yourdomain.com>
 
-NEXT_PUBLIC_VAPID_PUBLIC_KEY=...
-VAPID_PRIVATE_KEY=...
-VAPID_EMAIL=mailto:your@email.com
+# ─── Web Push ────────────────────────────────────────────────────────────────
+# Generate with: npx web-push generate-vapid-keys
+NEXT_PUBLIC_VAPID_PUBLIC_KEY=Bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+VAPID_PRIVATE_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+VAPID_EMAIL=mailto:admin@yourdomain.com
 
-CRON_SECRET=random_secure_string
+# ─── Cron Security ───────────────────────────────────────────────────────────
+CRON_SECRET=generate_a_random_64_char_string_here
 ```
 
 **Generate VAPID keys:**
@@ -83,106 +219,373 @@ CRON_SECRET=random_secure_string
 npx web-push generate-vapid-keys
 ```
 
-### 5. Run locally
+**Generate a CRON_SECRET:**
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+---
+
+## Production Deployment on Debian 13
+
+This guide walks through a complete production setup on a fresh **Debian 13 (Trixie)** server.
+
+### System Requirements
+
+| Resource | Minimum | Recommended |
+|---|---|---|
+| CPU | 1 vCPU | 2 vCPU |
+| RAM | 1 GB | 2 GB |
+| Disk | 10 GB | 20 GB |
+| OS | Debian 13 | Debian 13 |
+| Node.js | 20.9 LTS | 22 LTS |
+
+---
+
+### 1. Initial Server Setup
 
 ```bash
-npm run dev
-```
+# Update system
+apt update && apt upgrade -y
 
-Open http://localhost:3000
+# Install essentials
+apt install -y curl wget git build-essential ufw nginx certbot python3-certbot-nginx
+
+# Configure firewall
+ufw allow OpenSSH
+ufw allow 'Nginx Full'
+ufw enable
+```
 
 ---
 
-## Deployment (Vercel)
+### 2. Install Node.js 22 LTS
 
 ```bash
-npm i -g vercel
-vercel --prod
-```
+# Install via NodeSource
+curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+apt install -y nodejs
 
-Set all env vars in Vercel project settings. The daily sync cron at 08:00 UTC is in `vercel.json`.
+# Verify
+node -v   # should show v22.x.x
+npm -v
+
+# Install PM2 for process management
+npm install -g pm2
+```
 
 ---
 
-## Features
+### 3. Create a Dedicated User
 
-- Spotify OAuth login, profile save, logout
-- Private/public access mode with allowlist (Spotify ID or email)
-- Artist search with debounce — artist cards with image, genres, popularity, followers
-- Per-user artist watchlist, no duplicates, instant remove
-- Release sync: albums, singles, EPs, compilations, appears_on
-- Dashboard with filters (artist / type / date range / text search)
-- Monthly calendar view — click a day to see releases
-- Daily cron sync + manual sync button
-- Email notifications via Resend
-- Browser push notifications via VAPID
-- Per-user notification settings (email/push on/off)
-- Row Level Security — users only see their own data
-- Releases and artists are globally cached (shared)
-- Responsive + dark mode
+```bash
+# Create non-root user for the app
+useradd -m -s /bin/bash dropify
+passwd dropify
+
+# Add to sudo group if needed
+usermod -aG sudo dropify
+
+# Switch to app user
+su - dropify
+```
 
 ---
 
-## Project Structure
+### 4. Clone and Build the App
 
+```bash
+# As the dropify user
+cd /home/dropify
+
+# Clone the repo
+git clone https://github.com/niklask52t/Dropify
+cd Dropify
+
+# Install dependencies (production only for smaller footprint)
+npm ci
+
+# Create environment file
+cp .env.example .env.local
+nano .env.local   # Fill in all values
 ```
-src/
-  app/
-    (app)/dashboard/      Release feed with filters
-    (app)/artists/        Search + watchlist management
-    (app)/calendar/       Monthly calendar view
-    (app)/settings/       Account, notifications, watchlist
-    api/artists/search/   GET  — Spotify artist search
-    api/artists/track/    POST/DELETE — track/untrack artist
-    api/watchlist/        GET  — user's watchlist
-    api/releases/         GET  — filtered releases
-    api/sync/             POST — manual sync
-    api/cron/sync/        GET  — Vercel cron endpoint
-    api/notifications/    GET/PATCH settings, POST/DELETE push sub
-    auth/callback/        Supabase OAuth callback
-    login/                Login page
-    access-denied/        Private mode denial
-  lib/
-    supabase/client.ts    Browser client
-    supabase/server.ts    Server + service role client
-    spotify.ts            Client Credentials API helper
-    sync.ts               Sync logic + notification dispatch
-    email.ts              Resend email service
-    push.ts               web-push service
-    access-control.ts     Allowlist check
-  middleware.ts           Auth guard + access control
-  types/index.ts          All TypeScript types
-supabase/migrations/001_schema.sql   Full schema + RLS + trigger
-public/sw.js             Service Worker for push notifications
-vercel.json              Cron schedule (daily 08:00 UTC)
+
+**Build the app:**
+
+```bash
+npm run build
 ```
+
+A successful build outputs something like:
+```
+Route (app)                              Size     First Load JS
+┌ ○ /                                    ...
+├ ƒ /dashboard                           ...
+...
+```
+
+---
+
+### 5. Start with PM2
+
+```bash
+# Start the Next.js server with PM2
+pm2 start npm --name "dropify" -- start -- -p 3000
+
+# Save PM2 config so it restarts on reboot
+pm2 save
+
+# Generate and enable systemd startup script
+pm2 startup systemd -u dropify --hp /home/dropify
+# Run the command PM2 prints (as root)
+
+# Check status
+pm2 status
+pm2 logs dropify
+```
+
+---
+
+### 6. Configure Nginx Reverse Proxy
+
+```bash
+# As root
+nano /etc/nginx/sites-available/dropify
+```
+
+Paste this config (replace `yourdomain.com`):
+
+```nginx
+server {
+    listen 80;
+    server_name yourdomain.com www.yourdomain.com;
+
+    # Redirect HTTP → HTTPS
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name yourdomain.com www.yourdomain.com;
+
+    # SSL — certbot will fill this in
+    ssl_certificate     /etc/letsencrypt/live/yourdomain.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/yourdomain.com/privkey.pem;
+
+    # Security headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
+
+    # Proxy to Next.js
+    location / {
+        proxy_pass         http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header   Upgrade $http_upgrade;
+        proxy_set_header   Connection 'upgrade';
+        proxy_set_header   Host $host;
+        proxy_set_header   X-Real-IP $remote_addr;
+        proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    # Next.js static files — long cache
+    location /_next/static/ {
+        proxy_pass http://127.0.0.1:3000;
+        add_header Cache-Control "public, max-age=31536000, immutable";
+    }
+
+    # Service worker — must not be cached
+    location /sw.js {
+        proxy_pass http://127.0.0.1:3000;
+        add_header Cache-Control "no-cache, no-store, must-revalidate";
+    }
+}
+```
+
+Enable and test:
+
+```bash
+ln -s /etc/nginx/sites-available/dropify /etc/nginx/sites-enabled/
+nginx -t
+systemctl reload nginx
+```
+
+---
+
+### 7. SSL with Let's Encrypt
+
+```bash
+# Obtain certificate (replace with your domain)
+certbot --nginx -d yourdomain.com -d www.yourdomain.com \
+  --email your@email.com \
+  --agree-tos \
+  --non-interactive
+
+# Test auto-renewal
+certbot renew --dry-run
+
+# Certbot sets up a systemd timer for auto-renewal by default
+systemctl status certbot.timer
+```
+
+---
+
+### 8. Daily Sync Cron (Self-Hosted Alternative to Vercel Cron)
+
+If you're **not** deploying on Vercel, set up a system cron job instead:
+
+```bash
+# As the dropify user
+crontab -e
+```
+
+Add:
+
+```cron
+# Run Dropify release sync every day at 08:00 UTC
+0 8 * * * curl -s -X GET https://yourdomain.com/api/cron/sync \
+  -H "Authorization: Bearer YOUR_CRON_SECRET" \
+  >> /home/dropify/cron.log 2>&1
+```
+
+Replace `YOUR_CRON_SECRET` with the value from `.env.local`.
+
+---
+
+### 9. Updates and Redeployment
+
+```bash
+cd /home/dropify/Dropify
+
+# Pull latest code
+git pull origin main
+
+# Install any new deps
+npm ci
+
+# Rebuild
+npm run build
+
+# Reload PM2 (zero-downtime)
+pm2 reload dropify
+```
+
+---
+
+### 10. Monitoring
+
+```bash
+# Live logs
+pm2 logs dropify
+
+# Process status
+pm2 status
+
+# Nginx access log
+tail -f /var/log/nginx/access.log
+
+# Nginx error log
+tail -f /var/log/nginx/error.log
+```
+
+---
+
+### Deployment Checklist
+
+Before going live:
+
+- [ ] All env vars in `.env.local` are set
+- [ ] `NEXT_PUBLIC_APP_URL` matches your actual domain (HTTPS)
+- [ ] Spotify App redirect URIs include `https://yourdomain.com/auth/callback`
+- [ ] Supabase Auth redirect URLs include `https://yourdomain.com/auth/callback`
+- [ ] `CRON_SECRET` is a strong random value
+- [ ] Firewall allows only ports 22, 80, 443
+- [ ] SSL certificate obtained and auto-renewal tested
+- [ ] PM2 startup script installed (survives reboots)
+- [ ] `npm run build` completes without errors
 
 ---
 
 ## Access Control
 
-Set `APP_ACCESS_MODE=private` and configure:
-- `ALLOWED_SPOTIFY_USER_IDS` — comma-separated Spotify user IDs
-- `ALLOWED_EMAILS` — comma-separated email addresses
+Set `APP_ACCESS_MODE=private` in your env to restrict access. Then configure the allowlist:
 
-Find your Spotify ID at: https://www.spotify.com/account/overview/
+```env
+APP_ACCESS_MODE=private
+ALLOWED_SPOTIFY_USER_IDS=abc123def,xyz789abc
+ALLOWED_EMAILS=you@example.com,colleague@example.com
+```
+
+**How to find your Spotify user ID:**
+1. Open [open.spotify.com](https://open.spotify.com)
+2. Click your profile → "Profile"
+3. The ID is in the URL: `https://open.spotify.com/user/YOUR_ID_HERE`
+
+Or: [spotify.com/account/overview](https://www.spotify.com/account/overview/) → Profile
 
 ---
 
-## Sync Architecture
+## Architecture
 
-- **On track**: new artist tracked -> immediate sync (fire & forget)
-- **Manual**: TopBar sync button -> full sync
-- **Daily cron**: Vercel calls `/api/cron/sync` at 08:00 UTC
-- **Dedup**: upsert by `spotify_id` -> no duplicates ever
-- **Notifications**: after sync, new releases in past 25h trigger email/push once per user per release (tracked in `notifications_sent`)
+```
+src/
+  app/
+    (app)/dashboard/       Release feed with filters
+    (app)/artists/         Search + watchlist management
+    (app)/calendar/        Monthly calendar view
+    (app)/changelog/       This changelog page
+    (app)/settings/        Account, notifications, watchlist
+    api/artists/search/    GET  — Spotify artist search
+    api/artists/track/     POST/DELETE — track/untrack
+    api/watchlist/         GET  — user's watchlist
+    api/releases/          GET  — filtered releases
+    api/sync/              POST — manual sync trigger
+    api/cron/sync/         GET  — daily cron endpoint
+    api/notifications/     settings + push subscription
+    auth/callback/         Supabase OAuth callback
+    login/                 Login page
+    access-denied/         Private mode denial
+  lib/
+    supabase/client.ts     Browser Supabase client
+    supabase/server.ts     Server + service role client (async cookies)
+    spotify.ts             Client Credentials API helper
+    sync.ts                Full sync + single-artist sync + notifications
+    email.ts               Resend email service
+    push.ts                web-push VAPID service
+    access-control.ts      Allowlist check
+    utils.ts               Shared formatting helpers
+  proxy.ts                 Next.js 16 proxy (auth guard + access control)
+  types/index.ts           All TypeScript types
+
+supabase/migrations/
+  001_schema.sql           Full schema + RLS policies + auth trigger
+
+public/
+  sw.js                    Service Worker for push notifications
+  manifest.json            PWA manifest
+  logo-icon.png            Dropify icon (no text) — favicon, sidebar
+  logo-full.png            Dropify logo with text — login page
+
+vercel.json                Cron schedule: daily 08:00 UTC
+CHANGELOG.md               Version history
+```
+
+### Sync Architecture
+
+| Trigger | When | What |
+|---|---|---|
+| **On track** | User tracks a new artist | Immediate fire-and-forget sync for that artist |
+| **Manual** | User clicks "Sync" in TopBar | Full sync of all tracked artists |
+| **Daily cron** | 08:00 UTC via Vercel / system cron | Full sync + notifications for new releases |
+
+**Deduplication**: releases are upserted by `spotify_id` — no duplicates ever.  
+**Notifications**: sent for releases created in the past 25 h, tracked in `notifications_sent` to prevent re-sending.
 
 ---
 
-## Security
+## Changelog
 
-- Spotify secrets never exposed to the client
-- Service role key only server-side (sync/cron)
-- RLS: users read/write only their own data
-- Cron endpoint: `Authorization: Bearer CRON_SECRET`
-- Access control: middleware + OAuth callback
+See [CHANGELOG.md](CHANGELOG.md) or the in-app [Changelog](/changelog) page.

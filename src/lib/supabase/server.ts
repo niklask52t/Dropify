@@ -2,8 +2,8 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 
-export function createClient() {
-  const cookieStore = cookies();
+export async function createClient() {
+  const cookieStore = await cookies();
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -18,7 +18,7 @@ export function createClient() {
               cookieStore.set(name, value, options)
             );
           } catch {
-            // Server component — cookies are read-only
+            // Server component — cookies are read-only, ignore
           }
         },
       },
@@ -26,7 +26,7 @@ export function createClient() {
   );
 }
 
-// Service role client — bypasses RLS, for cron/sync operations
+/** Bypasses RLS — only for server-side sync/cron operations */
 export function createServiceClient() {
   return createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

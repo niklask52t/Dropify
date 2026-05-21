@@ -8,20 +8,18 @@ export async function GET(request: Request) {
   const next = requestUrl.searchParams.get('next') ?? '/dashboard';
 
   if (code) {
-    const supabase = createClient();
+    const supabase = await createClient();
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error && data.user) {
       const user = data.user;
       const spotifyId = user.user_metadata?.provider_id as string | undefined;
 
-      // Access control check
       const { allowed } = checkAccess(user.email, spotifyId);
       if (!allowed) {
         return NextResponse.redirect(new URL('/access-denied', requestUrl.origin));
       }
 
-      // Update profile with latest Spotify data
       await supabase.from('profiles').upsert(
         {
           id: user.id,

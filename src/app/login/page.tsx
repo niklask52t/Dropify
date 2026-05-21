@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/client';
 import { useState } from 'react';
+import Image from 'next/image';
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
@@ -28,31 +29,32 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center px-4">
-      {/* Background glow */}
+      {/* Ambient glow */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-brand/5 rounded-full blur-3xl" />
       </div>
 
       <div className="relative w-full max-w-sm">
-        {/* Logo */}
+        {/* Logo with text — full hero */}
         <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-brand rounded-2xl mb-4 shadow-lg shadow-brand/25">
-            <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-              <path d="M16 4L28 11V21L16 28L4 21V11L16 4Z" fill="black" opacity="0.2" />
-              <path d="M8 13C13 11 19 12 24 15" stroke="black" strokeWidth="2.5" strokeLinecap="round" />
-              <path d="M9 17C13 15.5 19 16.5 23 19" stroke="black" strokeWidth="2.5" strokeLinecap="round" />
-              <path d="M10 21C14 20 18 20.5 22 22.5" stroke="black" strokeWidth="2.5" strokeLinecap="round" />
-            </svg>
+          <div className="flex justify-center mb-2">
+            <Image
+              src="/logo-full.png"
+              alt="Dropify"
+              width={220}
+              height={100}
+              priority
+              className="drop-shadow-lg"
+            />
           </div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">Dropify</h1>
-          <p className="text-zinc-400 mt-2 text-sm">Track every release from your artists</p>
+          <p className="text-zinc-400 text-sm mt-1">Track every release from your artists</p>
         </div>
 
         {/* Card */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8">
-          <h2 className="text-lg font-semibold text-white mb-1">Welcome back</h2>
+          <h2 className="text-lg font-semibold text-white mb-1">Sign in</h2>
           <p className="text-zinc-400 text-sm mb-6">
-            Sign in with your Spotify account to start tracking releases.
+            Connect your Spotify account to start tracking releases.
           </p>
 
           {error && (
@@ -74,11 +76,11 @@ export default function LoginPage() {
             ) : (
               <SpotifyIcon />
             )}
-            {loading ? 'Connecting...' : 'Continue with Spotify'}
+            {loading ? 'Connecting…' : 'Continue with Spotify'}
           </button>
 
           <p className="text-zinc-500 text-xs text-center mt-4 leading-relaxed">
-            We only request read access to your profile.
+            We only request read access to your profile.<br />
             Your listening history is never accessed.
           </p>
         </div>

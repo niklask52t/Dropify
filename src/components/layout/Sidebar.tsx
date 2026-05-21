@@ -1,15 +1,17 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { LayoutDashboard, Music2, Calendar, Settings, Disc3 } from 'lucide-react';
+import { LayoutDashboard, Music2, Calendar, Settings, ScrollText } from 'lucide-react';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/artists', label: 'Artists', icon: Music2 },
-  { href: '/calendar', label: 'Calendar', icon: Calendar },
-  { href: '/settings', label: 'Settings', icon: Settings },
+  { href: '/artists',   label: 'Artists',   icon: Music2 },
+  { href: '/calendar',  label: 'Calendar',  icon: Calendar },
+  { href: '/changelog', label: 'Changelog', icon: ScrollText },
+  { href: '/settings',  label: 'Settings',  icon: Settings },
 ];
 
 export function Sidebar() {
@@ -17,11 +19,15 @@ export function Sidebar() {
 
   return (
     <aside className="hidden md:flex flex-col w-56 bg-zinc-950 border-r border-zinc-800/60 shrink-0">
-      {/* Logo */}
-      <div className="flex items-center gap-2.5 px-5 h-16 border-b border-zinc-800/60">
-        <div className="w-7 h-7 bg-brand rounded-lg flex items-center justify-center shrink-0">
-          <Disc3 size={16} className="text-black" />
-        </div>
+      {/* Logo — icon only in sidebar header */}
+      <div className="flex items-center gap-2.5 px-4 h-16 border-b border-zinc-800/60">
+        <Image
+          src="/logo-icon.png"
+          alt="Dropify"
+          width={28}
+          height={28}
+          className="shrink-0"
+        />
         <span className="font-bold text-white text-lg tracking-tight">Dropify</span>
       </div>
 
@@ -47,9 +53,8 @@ export function Sidebar() {
         })}
       </nav>
 
-      {/* Footer */}
       <div className="px-4 py-4 border-t border-zinc-800/60">
-        <p className="text-zinc-600 text-xs">Dropify v0.1</p>
+        <p className="text-zinc-600 text-xs">Dropify v0.2.0</p>
       </div>
     </aside>
   );

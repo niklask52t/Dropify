@@ -7,7 +7,7 @@ import type { Artist } from '@/types';
 export const revalidate = 0;
 
 export default async function SettingsPage() {
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -26,10 +26,9 @@ export default async function SettingsPage() {
 
   const profile = profileResult.data;
   const notifSettings = notifResult.data;
-  const watchlist = (watchlistResult.data ?? []).map((t) => ({
-    trackId: t.id,
-    artist: t.artists as unknown as Artist,
-  })).filter((t) => !!t.artist);
+  const watchlist = (watchlistResult.data ?? [])
+    .map((t) => ({ trackId: t.id, artist: t.artists as unknown as Artist }))
+    .filter((t) => !!t.artist);
 
   const isPrivate = process.env.APP_ACCESS_MODE === 'private';
 
@@ -39,7 +38,6 @@ export default async function SettingsPage() {
         <h1 className="text-2xl font-bold text-white">Settings</h1>
         <p className="text-zinc-400 mt-1 text-sm">Manage your account and preferences.</p>
       </div>
-
       <div className="space-y-6 max-w-2xl">
         <AccountInfo profile={profile} isPrivateMode={isPrivate} />
         <NotificationSettings initialSettings={notifSettings} />
