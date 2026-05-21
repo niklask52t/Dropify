@@ -1,0 +1,104 @@
+@import "tailwindcss";
+
+/* ─── Design Tokens (Tailwind 4 @theme) ───────────────────────────────────── */
+@theme {
+  /* Brand */
+  --color-brand:       #1DB954;
+  --color-brand-hover: #1ed760;
+  --color-brand-dark:  #158a3e;
+
+  /* Surface */
+  --color-surface:          #111111;
+  --color-surface-elevated: #1a1a1a;
+  --color-surface-overlay:  #222222;
+
+  /* Spotify alias */
+  --color-spotify-green:       #1DB954;
+  --color-spotify-green-light: #1ed760;
+  --color-spotify-black:       #191414;
+
+  /* Animations */
+  --animate-fade-in:    fadeIn 0.2s ease-in-out;
+  --animate-slide-up:   slideUp 0.3s ease-out;
+  --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(10px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+/* ─── Base ────────────────────────────────────────────────────────────────── */
+@layer base {
+  * { box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background-color: #0a0a0a;
+    color: #ffffff;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::-webkit-scrollbar       { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: #111111; }
+  ::-webkit-scrollbar-thumb { background: #333333; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #444444; }
+}
+
+/* ─── Component Shortcuts ─────────────────────────────────────────────────── */
+@layer components {
+  .card {
+    @apply bg-zinc-900 border border-zinc-800 rounded-xl;
+  }
+
+  .card-hover {
+    @apply bg-zinc-900 border border-zinc-800 rounded-xl
+           hover:border-zinc-700 hover:bg-zinc-800/50 transition-all duration-200;
+  }
+
+  .btn-primary {
+    @apply bg-brand hover:bg-brand-hover text-black font-semibold
+           px-4 py-2 rounded-lg transition-colors duration-150 text-sm;
+  }
+
+  .btn-secondary {
+    @apply bg-zinc-800 hover:bg-zinc-700 text-white font-medium
+           px-4 py-2 rounded-lg transition-colors duration-150 text-sm
+           border border-zinc-700;
+  }
+
+  .btn-ghost {
+    @apply hover:bg-zinc-800 text-zinc-400 hover:text-white
+           px-3 py-2 rounded-lg transition-colors duration-150 text-sm;
+  }
+
+  .input {
+    @apply bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2
+           text-white placeholder:text-zinc-500
+           focus:outline-none focus:ring-2 focus:ring-brand/50 focus:border-brand/50
+           transition-all duration-150 text-sm w-full;
+  }
+
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border;
+  }
+
+  .page-container {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  .section-title {
+    @apply text-xl font-bold text-white;
+  }
+
+  .text-muted {
+    @apply text-zinc-400;
+  }
+}
