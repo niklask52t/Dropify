@@ -14,6 +14,23 @@ interface Release {
 
 const releases: Release[] = [
   {
+    version: '0.3.0',
+    date: '2026-05-22',
+    summary: 'Supabase completely replaced by PostgreSQL + Prisma + NextAuth.js. All data now 100% local — no cloud dependency.',
+    changes: [
+      { type: 'breaking',    text: 'Supabase removed — replaced by PostgreSQL + Prisma ORM v6' },
+      { type: 'breaking',    text: 'NextAuth.js v4 replaces Supabase Auth — Spotify OAuth via /api/auth/callback/spotify' },
+      { type: 'breaking',    text: 'Env vars changed: DATABASE_URL + NEXTAUTH_SECRET replace all SUPABASE_* vars' },
+      { type: 'breaking',    text: 'All model fields migrated from snake_case to camelCase (Prisma convention)' },
+      { type: 'improvement', text: 'Zero external cloud dependencies — fully self-hostable on your own server' },
+      { type: 'improvement', text: 'Prisma schema in prisma/schema.prisma — npm run db:migrate to set up' },
+      { type: 'improvement', text: 'Prisma Studio available via npm run db:studio' },
+      { type: 'fix',         text: '0 npm vulnerabilities — cookie, uuid, postcss all patched via overrides' },
+      { type: 'improvement', text: 'Node.js recommendation updated to 24 LTS (Active LTS as of May 2026)' },
+      { type: 'improvement', text: 'README and deployment guide fully updated for PostgreSQL + NextAuth stack' },
+    ],
+  },
+  {
     version: '0.2.0',
     date: '2026-05-21',
     summary: 'Major stack upgrade to Next.js 16, Tailwind CSS 4, React 19 and all latest stable packages.',
