@@ -9,20 +9,12 @@ interface ReleaseCardProps {
 }
 
 export function ReleaseCard({ release, compact = false }: ReleaseCardProps) {
-  const artist = release.artist;
-
   return (
     <div className={cn('card-hover flex items-center gap-3', compact ? 'p-2.5' : 'p-3')}>
-      {/* Cover */}
       <div className={cn('relative shrink-0 rounded-lg overflow-hidden bg-zinc-800', compact ? 'w-10 h-10' : 'w-14 h-14')}>
-        {release.cover_url ? (
-          <Image
-            src={release.cover_url}
-            alt={release.title}
-            fill
-            className="object-cover"
-            sizes={compact ? '40px' : '56px'}
-          />
+        {release.coverUrl ? (
+          <Image src={release.coverUrl} alt={release.title} fill className="object-cover"
+            sizes={compact ? '40px' : '56px'} />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-zinc-600">
             <svg width={compact ? 16 : 20} height={compact ? 16 : 20} viewBox="0 0 24 24" fill="currentColor">
@@ -32,15 +24,12 @@ export function ReleaseCard({ release, compact = false }: ReleaseCardProps) {
         )}
       </div>
 
-      {/* Info */}
       <div className="flex-1 min-w-0">
         <p className={cn('font-semibold text-white leading-tight truncate', compact ? 'text-xs' : 'text-sm')}>
           {release.title}
         </p>
-        {artist && (
-          <p className={cn('text-zinc-400 truncate mt-0.5', compact ? 'text-xs' : 'text-xs')}>
-            {artist.name}
-          </p>
+        {release.artist && (
+          <p className="text-zinc-400 text-xs truncate mt-0.5">{release.artist.name}</p>
         )}
         <div className="flex items-center gap-2 mt-1 flex-wrap">
           <span className={cn('badge text-[10px]', getReleaseTypeColor(release.type))}>
@@ -48,31 +37,21 @@ export function ReleaseCard({ release, compact = false }: ReleaseCardProps) {
           </span>
           {!compact && (
             <span className="text-zinc-500 text-xs">
-              {formatReleaseDate(release.release_date, release.release_date_precision)}
+              {formatReleaseDate(release.releaseDate, release.releaseDatePrecision)}
             </span>
           )}
         </div>
       </div>
 
-      {/* Date + link */}
       <div className="shrink-0 flex flex-col items-end gap-1">
-        {compact ? (
+        {compact && (
           <span className="text-zinc-500 text-[10px]">
-            {formatReleaseDate(release.release_date, release.release_date_precision)}
-          </span>
-        ) : (
-          <span className="text-zinc-500 text-xs hidden sm:block">
-            {formatReleaseDate(release.release_date, release.release_date_precision)}
+            {formatReleaseDate(release.releaseDate, release.releaseDatePrecision)}
           </span>
         )}
-        {release.spotify_url && (
-          <a
-            href={release.spotify_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-zinc-600 hover:text-brand transition-colors"
-            title="Open on Spotify"
-          >
+        {release.spotifyUrl && (
+          <a href={release.spotifyUrl} target="_blank" rel="noopener noreferrer"
+            className="text-zinc-600 hover:text-brand transition-colors">
             <ExternalLink size={13} />
           </a>
         )}

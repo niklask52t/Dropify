@@ -4,6 +4,28 @@ All notable changes to Dropify are documented here.
 
 ---
 
+## [0.3.0] — 2026-05-22
+
+**Supabase completely removed. All data now local in own PostgreSQL database.**
+
+### Breaking
+- Supabase replaced by PostgreSQL + Prisma ORM v6 + NextAuth.js v4
+- All field names migrated from snake_case to camelCase (Prisma convention)
+- New env vars: `DATABASE_URL`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL`
+- Removed: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
+- Spotify redirect URI changed to `/api/auth/callback/spotify`
+
+### Fixed
+- All npm vulnerabilities resolved via `overrides` (postcss, cookie, uuid)
+- Node.js recommendation updated to 24 LTS (Active LTS as of May 2026)
+
+### Improved
+- Zero external dependencies for auth and database — fully self-hostable
+- Prisma schema in `prisma/schema.prisma` — run `npm run db:migrate` to set up
+- Application-layer access control replaces Supabase RLS
+
+---
+
 ## [0.2.0] — 2026-05-21
 
 **Major stack upgrade to all latest stable packages.**

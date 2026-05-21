@@ -1,49 +1,51 @@
-export interface Profile {
+// ─── Domain types (camelCase, matching Prisma model fields) ──────────────────
+
+export interface AppUser {
   id: string;
+  name: string | null;
   email: string | null;
-  display_name: string | null;
-  avatar_url: string | null;
-  spotify_id: string | null;
-  created_at: string;
-  updated_at: string;
+  image: string | null;
+  spotifyId: string | null;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface Artist {
   id: string;
-  spotify_id: string;
+  spotifyId: string;
   name: string;
-  image_url: string | null;
+  imageUrl: string | null;
   genres: string[];
   popularity: number;
   followers: number;
-  spotify_url: string | null;
-  last_synced_at: string | null;
-  created_at: string;
-  updated_at: string;
+  spotifyUrl: string | null;
+  lastSyncedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface TrackedArtist {
   id: string;
-  user_id: string;
-  artist_id: string;
-  created_at: string;
+  userId: string;
+  artistId: string;
+  createdAt: Date;
   artist?: Artist;
 }
 
 export interface Release {
   id: string;
-  spotify_id: string;
-  artist_spotify_id: string;
+  spotifyId: string;
+  artistSpotifyId: string;
   title: string;
   type: 'album' | 'single' | 'compilation' | 'appears_on';
-  release_date: string;
-  release_date_precision: 'year' | 'month' | 'day';
-  cover_url: string | null;
-  spotify_url: string | null;
-  total_tracks: number;
+  releaseDate: string;
+  releaseDatePrecision: 'year' | 'month' | 'day';
+  coverUrl: string | null;
+  spotifyUrl: string | null;
+  totalTracks: number;
   artists: SpotifyArtistRef[];
-  created_at: string;
-  updated_at: string;
+  createdAt: Date;
+  updatedAt: Date;
   artist?: Artist;
 }
 
@@ -55,35 +57,36 @@ export interface SpotifyArtistRef {
 
 export interface NotificationSettings {
   id: string;
-  user_id: string;
-  email_enabled: boolean;
-  push_enabled: boolean;
-  created_at: string;
-  updated_at: string;
+  userId: string;
+  emailEnabled: boolean;
+  pushEnabled: boolean;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
-export interface PushSubscription {
+export interface PushSubscriptionRecord {
   id: string;
-  user_id: string;
+  userId: string;
   endpoint: string;
   p256dh: string;
-  auth_key: string;
-  created_at: string;
+  authKey: string;
+  createdAt: Date;
 }
 
 export interface SyncLog {
   id: string;
-  started_at: string;
-  completed_at: string | null;
+  startedAt: Date;
+  completedAt: Date | null;
   status: 'running' | 'completed' | 'failed';
-  artists_synced: number;
-  releases_found: number;
-  new_releases: number;
-  error_message: string | null;
-  triggered_by: string;
+  artistsSynced: number;
+  releasesFound: number;
+  newReleases: number;
+  errorMessage: string | null;
+  triggeredBy: string;
 }
 
-// Spotify API response types
+// ─── Spotify API response types ───────────────────────────────────────────────
+
 export interface SpotifyArtist {
   id: string;
   name: string;

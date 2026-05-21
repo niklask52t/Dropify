@@ -1,38 +1,31 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/db';
 
 export async function GET() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const session = await getServerSession(authOptions);
+  if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { data } = await supabase
-    .from('notification_settings')
-    .select('*')
-    .eq('user_id', user.id)
-    .single();
-
-  return NextResponse.json({ settings: data });
+  const settings = await prisma.notificationSettings.findUnique({
+    where: { userId: session.user.id },
+  });
+  return NextResponse.json({ settings });
 }
 
 export async function PATCH(request: Request) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const session = await getServerSession(authOptions);
+  if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const body = await request.json();
-  const { email_enabled, push_enabled } = body;
+  const data: Record<string, unknown> = { updatedAt: new Date() };
+  if (body.email_enabled !== undefined) data.emailEnabled = Boolean(body.email_enabled);
+  if (body.push_enabled  !== undefined) data.pushEnabled  = Boolean(body.push_enabled);
 
-  const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
-  if (email_enabled !== undefined) updates.email_enabled = Boolean(email_enabled);
-  if (push_enabled !== undefined)  updates.push_enabled  = Boolean(push_enabled);
-
-  const { data, error } = await supabase
-    .from('notification_settings')
-    .upsert({ user_id: user.id, ...updates }, { onConflict: 'user_id' })
-    .select()
-    .single();
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ settings: data });
+  const settings = await prisma.notificationSettings.upsert({
+    where:  { userId: session.user.id },
+    create: { userId: session.user.id, ...data },
+    update: data,
+  });
+  return NextResponse.json({ settings });
 }

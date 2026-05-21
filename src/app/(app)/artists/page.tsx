@@ -1,31 +1,28 @@
-import { createClient } from '@/lib/supabase/server';
+import { redirect } from 'next/navigation';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/db';
 import { ArtistsClient } from '@/components/artists/ArtistsClient';
 import type { Artist } from '@/types';
 
 export const revalidate = 0;
 
 export default async function ArtistsPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const session = await getServerSession(authOptions);
+  if (!session?.user) redirect('/login');
 
-  if (!user) return null;
+  const tracked = await prisma.trackedArtist.findMany({
+    where: { userId: session.user.id },
+    include: { artist: true },
+    orderBy: { createdAt: 'desc' },
+  });
 
-  const { data: tracked } = await supabase
-    .from('tracked_artists')
-    .select('id, artist_id, created_at, artists(*)')
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: false });
+  const watchlist = tracked.map((t) => ({
+    trackId: t.id,
+    artist: t.artist as unknown as Artist,
+  }));
 
-  const watchlist = (tracked ?? [])
-    .map((t) => ({
-      trackId: t.id as string,
-      artist: t.artists as unknown as Artist,
-    }))
-    .filter((t) => !!t.artist);
-
-  const trackedSpotifyIds = watchlist.map((t) => t.artist.spotify_id);
+  const trackedSpotifyIds = watchlist.map((t) => t.artist.spotifyId);
 
   return (
     <div>

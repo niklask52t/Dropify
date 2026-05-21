@@ -50,7 +50,8 @@ A production-ready web app for tracking Spotify artist releases. Multiple users 
 | Framework | Next.js 16 (App Router) |
 | Language | TypeScript 6 |
 | Styling | Tailwind CSS 4 |
-| Auth + DB | Supabase (PostgreSQL + RLS) |
+| Auth | NextAuth.js v4 + Spotify Provider |
+| Database | PostgreSQL + Prisma ORM v6 |
 | Spotify Data | Spotify Client Credentials API |
 | Email | Resend v6 |
 | Push | web-push (VAPID) |
@@ -64,7 +65,7 @@ A production-ready web app for tracking Spotify artist releases. Multiple users 
 ### Prerequisites
 
 - Node.js ≥ 20.9 (`node -v`)
-- A [Supabase](https://supabase.com) project
+- PostgreSQL 15+ running locally or on your server
 - A [Spotify Developer App](https://developer.spotify.com/dashboard)
 
 ### 1. Clone and install
@@ -82,12 +83,17 @@ cp .env.example .env.local
 # Edit .env.local with your values (see Environment Variables section)
 ```
 
-### 3. Run database migrations
+### 3. Set up the database
 
-In your Supabase project → SQL Editor, run the full content of:
+```bash
+# Create the PostgreSQL database
+createdb dropify
 
-```
-supabase/migrations/001_schema.sql
+# Push the Prisma schema and run migrations
+npm run db:migrate
+
+# (Dev only) view data in Prisma Studio
+npm run db:studio
 ```
 
 ### 4. Start development server
@@ -127,54 +133,61 @@ Dropify requests these scopes on login:
 
 All release/artist data is fetched via **Client Credentials** (no user token required).
 
-### 4. Configure Supabase Auth with Spotify
+### 4. Configure Redirect URI in your Spotify App
 
-1. Open your Supabase project → **Authentication → Providers → Spotify**
-2. Toggle **Enable**
-3. Enter your **Spotify Client ID** and **Client Secret**
-4. The **Callback URL** shown by Supabase (e.g. `https://xxxx.supabase.co/auth/v1/callback`) — add this to your Spotify app's Redirect URIs
-5. Save
+NextAuth handles the OAuth flow at `/api/auth/callback/spotify`. Add this to your Spotify app's **Redirect URIs**:
 
-> **Important**: You need **both** the Supabase callback URL (for the OAuth flow) and your app's `/auth/callback` route in Spotify's Redirect URIs.
+- `http://localhost:3000/api/auth/callback/spotify` (local dev)
+- `https://yourdomain.com/api/auth/callback/spotify` (production)
 
 ---
 
-## Supabase Setup
+## Database Setup (PostgreSQL + Prisma)
 
-### 1. Create a project
+All data is stored **100% locally** in your own PostgreSQL database. No cloud service required.
 
-1. Go to [supabase.com](https://supabase.com) → **New project**
-2. Choose a region close to your users
-3. Set a strong database password
+### 1. Install PostgreSQL
 
-### 2. Run the schema
+```bash
+# Debian/Ubuntu
+apt install postgresql postgresql-contrib
 
-1. Open your project → **SQL Editor**
-2. Paste the entire content of `supabase/migrations/001_schema.sql`
-3. Click **Run**
+# Start service
+systemctl enable --now postgresql
+```
 
-This creates:
-- `profiles` — user data (auto-populated via Auth trigger)
-- `artists` — global artist cache
-- `tracked_artists` — per-user watchlist
-- `releases` — global release cache
-- `notification_settings` — per-user prefs
-- `push_subscriptions` — VAPID subscriptions
-- `sync_logs` — cron/sync history
-- `notifications_sent` — dedup guard for notifications
+### 2. Create the database and user
 
-### 3. Get your API keys
+```bash
+sudo -u postgres psql
 
-Project Settings → **API**:
-- `URL` → `NEXT_PUBLIC_SUPABASE_URL`
-- `anon public` key → `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `service_role` key → `SUPABASE_SERVICE_ROLE_KEY` (**keep this secret!**)
+-- In psql:
+CREATE USER dropify WITH PASSWORD 'yourpassword';
+CREATE DATABASE dropify OWNER dropify;
+\q
+```
 
-### 4. Configure Auth Redirect
+### 3. Set DATABASE_URL in .env.local
 
-**Authentication → URL Configuration**:
-- **Site URL**: `https://yourdomain.com`
-- **Redirect URLs** (add all): `https://yourdomain.com/auth/callback`, `http://localhost:3000/auth/callback`
+```env
+DATABASE_URL=postgresql://dropify:yourpassword@localhost:5432/dropify
+```
+
+### 4. Run migrations
+
+```bash
+npm run db:migrate
+```
+
+Prisma creates all tables automatically from `prisma/schema.prisma`. Tables:
+- `User`, `Account`, `Session` — NextAuth auth tables
+- `Artist` — global artist cache
+- `TrackedArtist` — per-user watchlist
+- `Release` — global release cache
+- `NotificationSettings` — per-user prefs
+- `PushSubscription` — VAPID subscriptions
+- `SyncLog` — sync history
+- `NotificationSent` — notification dedup guard
 
 ---
 
@@ -183,10 +196,12 @@ Project Settings → **API**:
 Copy `.env.example` to `.env.local` and fill in all values:
 
 ```env
-# ─── Supabase ────────────────────────────────────────────────────────────────
-NEXT_PUBLIC_SUPABASE_URL=https://xxxxxxxxxxxx.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1...
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1...
+# ─── Database ────────────────────────────────────────────────────────────────
+DATABASE_URL=postgresql://dropify:password@localhost:5432/dropify
+
+# ─── NextAuth ────────────────────────────────────────────────────────────────
+NEXTAUTH_SECRET=your_64_char_random_string   # node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+NEXTAUTH_URL=https://yourdomain.com
 
 # ─── Spotify ─────────────────────────────────────────────────────────────────
 SPOTIFY_CLIENT_ID=your_client_id_here
