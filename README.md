@@ -238,7 +238,7 @@ This guide walks through a complete production setup on a fresh **Debian 13 (Tri
 | RAM | 1 GB | 2 GB |
 | Disk | 10 GB | 20 GB |
 | OS | Debian 13 | Debian 13 |
-| Node.js | 20.9 LTS | 22 LTS |
+| Node.js | 20.9 LTS | 24 LTS |
 
 ---
 
@@ -259,15 +259,15 @@ ufw enable
 
 ---
 
-### 2. Install Node.js 22 LTS
+### 2. Install Node.js 24 LTS
 
 ```bash
 # Install via NodeSource
-curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+curl -fsSL https://deb.nodesource.com/setup_24.x | bash -
 apt install -y nodejs
 
 # Verify
-node -v   # should show v22.x.x
+node -v   # should show v24.x.x
 npm -v
 
 # Install PM2 for process management
